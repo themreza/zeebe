@@ -20,7 +20,6 @@ import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import io.atomix.cluster.MemberId;
-import io.atomix.raft.RaftError;
 import io.atomix.raft.RaftServer;
 import io.atomix.raft.cluster.RaftCluster;
 import io.atomix.raft.cluster.RaftClusterEvent;
@@ -28,7 +27,6 @@ import io.atomix.raft.cluster.RaftClusterEventListener;
 import io.atomix.raft.cluster.RaftMember;
 import io.atomix.raft.cluster.RaftMember.Type;
 import io.atomix.raft.impl.RaftContext;
-import io.atomix.raft.protocol.JoinRequest;
 import io.atomix.raft.protocol.LeaveRequest;
 import io.atomix.raft.protocol.RaftResponse;
 import io.atomix.raft.storage.system.Configuration;
@@ -53,7 +51,9 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 
-/** Manages the persistent state of the Raft cluster from the perspective of a single server. */
+/**
+ * Manages the persistent state of the Raft cluster from the perspective of a single server.
+ */
 public final class RaftClusterContext implements RaftCluster, AutoCloseable {
 
   private final Logger log;
@@ -69,8 +69,10 @@ public final class RaftClusterContext implements RaftCluster, AutoCloseable {
   private volatile CompletableFuture<Void> joinFuture;
   private volatile Scheduled leaveTimeout;
   private volatile CompletableFuture<Void> leaveFuture;
+  private final RaftJoinHelper raftJoinHelper;
 
   public RaftClusterContext(final MemberId localMemberId, final RaftContext raft) {
+
     final Instant time = Instant.now();
     member = new DefaultRaftMember(localMemberId, RaftMember.Type.PASSIVE, time).setCluster(this);
     this.raft = checkNotNull(raft, "context cannot be null");
@@ -111,6 +113,11 @@ public final class RaftClusterContext implements RaftCluster, AutoCloseable {
         }
       }
     }
+
+    final var protocol = raft.getProtocol();
+    final var threadContext = raft.getThreadContext();
+    raftJoinHelper = new RaftJoinHelper(threadContext, protocol::join, threadContext::schedule,
+        raft.getElectionTimeout().multipliedBy(2), this::onSuccessfulJoinResponse);
   }
 
   @Override
@@ -234,7 +241,9 @@ public final class RaftClusterContext implements RaftCluster, AutoCloseable {
     return join();
   }
 
-  /** Leaves the cluster. */
+  /**
+   * Leaves the cluster.
+   */
   @Override
   public synchronized CompletableFuture<Void> leave() {
     if (leaveFuture != null) {
@@ -354,7 +363,9 @@ public final class RaftClusterContext implements RaftCluster, AutoCloseable {
     return members != null ? members : List.of();
   }
 
-  /** Starts the join to the cluster. */
+  /**
+   * Starts the join to the cluster.
+   */
   private synchronized CompletableFuture<Void> join() {
     joinFuture = new CompletableFuture<>();
 
@@ -384,85 +395,28 @@ public final class RaftClusterContext implements RaftCluster, AutoCloseable {
     return joinFuture.whenComplete((result, error) -> joinFuture = null);
   }
 
-  /** Recursively attempts to join the cluster. */
+  /**
+   * Recursively attempts to join the cluster.
+   */
   private void join(final Iterator<RaftMemberContext> iterator) {
-    if (iterator.hasNext()) {
-      cancelJoinTimer();
-      joinTimeout =
-          raft.getThreadContext()
-              .schedule(
-                  raft.getElectionTimeout().multipliedBy(2),
-                  () -> {
-                    join(iterator);
-                  });
+    raftJoinHelper.join(iterator,
+        () -> new DefaultRaftMember(getMember().memberId(), getMember().getType(),
+            getMember().getLastUpdated()), () -> getActiveMemberStates().iterator());
+  }
 
-      final RaftMemberContext member = iterator.next();
+  private void onSuccessfulJoinResponse(final io.atomix.raft.protocol.JoinResponse response) {
+    final Configuration configuration =
+        new Configuration(
+            response.index(),
+            response.term(),
+            response.timestamp(),
+            response.members());
 
-      log.debug("Attempting to join via {}", member.getMember().memberId());
-
-      final JoinRequest request =
-          JoinRequest.builder()
-              .withMember(
-                  new DefaultRaftMember(
-                      getMember().memberId(), getMember().getType(), getMember().getLastUpdated()))
-              .build();
-      raft.getProtocol()
-          .join(member.getMember().memberId(), request)
-          .whenCompleteAsync(
-              (response, error) -> {
-                // Cancel the join timer.
-                cancelJoinTimer();
-
-                if (error == null) {
-                  if (response.status() == RaftResponse.Status.OK) {
-                    log.debug("Successfully joined via {}", member.getMember().memberId());
-
-                    final Configuration configuration =
-                        new Configuration(
-                            response.index(),
-                            response.term(),
-                            response.timestamp(),
-                            response.members());
-
-                    // Configure the cluster with the join response.
-                    // Commit the configuration as we know it was committed via the successful join
-                    // response.
-                    configure(configuration).commit();
-                    completeJoinFuture();
-                  } else if (response.error() == null
-                      || response.error().type() == RaftError.Type.CONFIGURATION_ERROR) {
-                    // If the response error is null, that indicates that no error occurred but the
-                    // leader was
-                    // in a state that was incapable of handling the join request. Attempt to join
-                    // the leader
-                    // again after an election timeout.
-                    log.debug(
-                        "Failed to join {}, probably leader but currently not able to accept the join request. Retry later.",
-                        member.getMember().memberId());
-                    join(getActiveMemberStates().iterator());
-                  } else {
-                    // If the response error was non-null, attempt to join via the next server in
-                    // the members list.
-                    log.debug(
-                        "Failed to join {}. Received error {}",
-                        member.getMember().memberId(),
-                        response.error());
-                    join(iterator);
-                  }
-                } else {
-                  log.debug("Failed to join {}", member.getMember().memberId(), error);
-                  join(iterator);
-                }
-              },
-              raft.getThreadContext());
-    }
-    // If join attempts remain, schedule another attempt after two election timeouts. This allows
-    // enough time
-    // for servers to potentially timeout and elect a leader.
-    else {
-      log.debug("Failed to join cluster, retrying...");
-      join(getActiveMemberStates().iterator());
-    }
+    // Configure the cluster with the join response.
+    // Commit the configuration as we know it was committed via the successful join
+    // response.
+    configure(configuration).commit();
+    completeJoinFuture();
   }
 
   private void completeJoinFuture() {
@@ -474,7 +428,9 @@ public final class RaftClusterContext implements RaftCluster, AutoCloseable {
     }
   }
 
-  /** Attempts to leave the cluster. */
+  /**
+   * Attempts to leave the cluster.
+   */
   private void leave(final CompletableFuture<Void> future) {
     // Set a timer to retry the attempt to leave the cluster.
     leaveTimeout =
@@ -521,7 +477,9 @@ public final class RaftClusterContext implements RaftCluster, AutoCloseable {
             });
   }
 
-  /** Cancels the leave timeout. */
+  /**
+   * Cancels the leave timeout.
+   */
   private void cancelLeaveTimer() {
     if (leaveTimeout != null) {
       log.trace("Cancelling leave timeout");
@@ -676,7 +634,9 @@ public final class RaftClusterContext implements RaftCluster, AutoCloseable {
     cancelJoinTimer();
   }
 
-  /** Cancels the join timeout. */
+  /**
+   * Cancels the join timeout.
+   */
   private void cancelJoinTimer() {
     if (joinTimeout != null) {
       log.trace("Cancelling join timeout");
