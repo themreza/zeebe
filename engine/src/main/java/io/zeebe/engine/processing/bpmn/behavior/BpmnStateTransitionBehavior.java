@@ -26,7 +26,7 @@ import io.zeebe.protocol.record.intent.WorkflowInstanceIntent;
 import io.zeebe.protocol.record.value.BpmnElementType;
 import java.util.function.Function;
 
-public final class BpmnStateTransitionBehavior {
+public class BpmnStateTransitionBehavior {
 
   private static final String NO_WORKFLOW_FOUND_MESSAGE =
       "Expected to find a deployed workflow for process id '%s', but none found.";

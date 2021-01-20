@@ -18,7 +18,7 @@ import io.zeebe.protocol.record.intent.Intent;
 import java.util.function.Consumer;
 
 /** Appends records to the stream and applies state changes for follow-up events */
-public final class StreamAppender implements TypedStreamWriter {
+public class StreamAppender implements TypedStreamWriter {
 
   private final TypedStreamWriter delegate;
   private final EventApplier eventApplier;
