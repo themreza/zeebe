@@ -12,6 +12,7 @@ import static io.zeebe.util.buffer.BufferUtil.bufferAsString;
 import io.zeebe.protocol.impl.record.value.workflowinstance.WorkflowInstanceRecord;
 import io.zeebe.protocol.record.intent.WorkflowInstanceIntent;
 import io.zeebe.protocol.record.value.BpmnElementType;
+import java.util.Objects;
 import org.agrona.DirectBuffer;
 
 public final class BpmnElementContextImpl implements BpmnElementContext {
@@ -126,5 +127,24 @@ public final class BpmnElementContextImpl implements BpmnElementContext {
         + ", workflowKey="
         + getWorkflowKey()
         + '}';
+  }
+
+  @Override
+  public boolean equals(final Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    final BpmnElementContextImpl that = (BpmnElementContextImpl) o;
+    return elementInstanceKey == that.elementInstanceKey
+        && recordValue.equals(that.recordValue)
+        && intent == that.intent;
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(elementInstanceKey, recordValue, intent);
   }
 }

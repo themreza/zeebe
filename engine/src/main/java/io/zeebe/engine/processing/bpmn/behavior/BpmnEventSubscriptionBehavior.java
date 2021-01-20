@@ -43,7 +43,7 @@ import io.zeebe.protocol.record.value.ErrorType;
 import io.zeebe.util.Either;
 import java.util.function.ToLongFunction;
 
-public final class BpmnEventSubscriptionBehavior {
+public class BpmnEventSubscriptionBehavior {
 
   private static final String NO_WORKFLOW_FOUND_MESSAGE =
       "Expected to create an instance of workflow with key '%d', but no such workflow was found";

@@ -25,7 +25,7 @@ import java.util.function.Function;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 
-public final class ExpressionProcessor {
+public class ExpressionProcessor {
 
   private static final EvaluationContext EMPTY_EVALUATION_CONTEXT = x -> null;
 

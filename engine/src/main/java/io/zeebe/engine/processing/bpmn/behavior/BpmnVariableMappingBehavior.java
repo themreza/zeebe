@@ -20,7 +20,7 @@ import io.zeebe.util.Either;
 import java.util.Optional;
 import org.agrona.DirectBuffer;
 
-public final class BpmnVariableMappingBehavior {
+public class BpmnVariableMappingBehavior {
   private final ExpressionProcessor expressionProcessor;
   private final VariablesState variablesState;
   private final ElementInstanceState elementInstanceState;
