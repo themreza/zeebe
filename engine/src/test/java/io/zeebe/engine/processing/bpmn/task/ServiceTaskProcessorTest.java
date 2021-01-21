@@ -2,11 +2,13 @@ package io.zeebe.engine.processing.bpmn.task;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import io.zeebe.engine.processing.bpmn.BpmnElementContextImpl;
 import io.zeebe.engine.processing.bpmn.behavior.BpmnBehaviors;
 import io.zeebe.engine.processing.bpmn.behavior.BpmnEventSubscriptionBehavior;
+import io.zeebe.engine.processing.bpmn.behavior.BpmnStateBehavior;
 import io.zeebe.engine.processing.bpmn.behavior.BpmnStateTransitionBehavior;
 import io.zeebe.engine.processing.bpmn.behavior.BpmnVariableMappingBehavior;
 import io.zeebe.engine.processing.common.ExpressionProcessor;
@@ -35,6 +37,7 @@ public class ServiceTaskProcessorTest {
   @Mock BpmnEventSubscriptionBehavior mockEventSubscriptionBehavior;
   @Mock ExpressionProcessor mockExpressionProcessor;
   @Mock TypedCommandWriter mockCommandWriter;
+  @Mock BpmnStateBehavior mockStateBehavior;
 
   private ServiceTaskProcessor sut;
 
@@ -46,6 +49,7 @@ public class ServiceTaskProcessorTest {
     when(mockBehaviors.eventSubscriptionBehavior()).thenReturn(mockEventSubscriptionBehavior);
     when(mockBehaviors.expressionBehavior()).thenReturn(mockExpressionProcessor);
     when(mockBehaviors.commandWriter()).thenReturn(mockCommandWriter);
+    when(mockBehaviors.stateBehavior()).thenReturn(mockStateBehavior);
 
     sut = new ServiceTaskProcessor(mockBehaviors);
   }
@@ -86,6 +90,8 @@ public class ServiceTaskProcessorTest {
     // then
     verify(mockStateTransitionBehavior).transitionToActivating(context);
     verify(mockStateTransitionBehavior).transitionToActivated(context2);
+
+    verifyNoInteractions(mockStateBehavior);
   }
 
   private DirectBuffer wrapString(final String input) {
