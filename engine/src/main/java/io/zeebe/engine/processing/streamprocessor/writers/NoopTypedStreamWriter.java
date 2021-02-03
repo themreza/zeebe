@@ -44,15 +44,6 @@ public final class NoopTypedStreamWriter implements TypedStreamWriter {
   }
 
   @Override
-  public void appendFollowUpEvent(
-      final long key,
-      final Intent intent,
-      final UnpackedObject value,
-      final Consumer<RecordMetadata> metadata) {
-    // no op implementation
-  }
-
-  @Override
   public void configureSourceContext(final long sourceRecordPosition) {
     // no op implementation
   }

@@ -36,23 +36,11 @@ public final class StateWriter implements TypedEventWriter {
 
   @Override
   public void appendNewEvent(final long key, final Intent intent, final UnpackedObject value) {
-    appendFollowUpEvent(key, intent, value, NO_METADATA);
+    streamWriter.appendNewEvent(key, intent, value);
   }
 
   @Override
   public void appendFollowUpEvent(final long key, final Intent intent, final UnpackedObject value) {
-    appendFollowUpEvent(key, intent, value, NO_METADATA);
-  }
-
-  @Override
-  public void appendFollowUpEvent(
-      final long key,
-      final Intent intent,
-      final UnpackedObject value,
-      final Consumer<RecordMetadata> metadata) {
-    // using the consumer as a callback, the event appliers have access to the metadata
-    final Consumer<RecordMetadata> callback =
-        data -> eventAppliers.applyState(key, intent, value, data);
-    streamWriter.appendFollowUpEvent(key, intent, value, callback.andThen(metadata));
+    streamWriter.appendFollowUpEvent(key, intent, value);
   }
 }

@@ -269,18 +269,6 @@ public class StreamProcessorHealthTest {
     }
 
     @Override
-    public void appendFollowUpEvent(
-        final long key,
-        final Intent intent,
-        final UnpackedObject value,
-        final Consumer<RecordMetadata> metadata) {
-      if (shouldFailErrorHandlingInTransaction.get()) {
-        throw new RuntimeException("Expected failure on append followup event");
-      }
-      wrappedWriter.appendFollowUpEvent(key, intent, value, metadata);
-    }
-
-    @Override
     public void configureSourceContext(final long sourceRecordPosition) {
       wrappedWriter.configureSourceContext(sourceRecordPosition);
     }

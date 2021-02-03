@@ -51,15 +51,6 @@ public final class TypedStreamWriterProxy implements TypedStreamWriter {
   }
 
   @Override
-  public void appendFollowUpEvent(
-      final long key,
-      final Intent intent,
-      final UnpackedObject value,
-      final Consumer<RecordMetadata> metadata) {
-    writer.appendFollowUpEvent(key, intent, value, metadata);
-  }
-
-  @Override
   public void configureSourceContext(final long sourceRecordPosition) {
     writer.configureSourceContext(sourceRecordPosition);
   }
