@@ -23,6 +23,7 @@ import io.zeebe.engine.processing.message.command.SubscriptionCommandSender;
 import io.zeebe.engine.processing.streamprocessor.ProcessingContext;
 import io.zeebe.engine.processing.streamprocessor.TypedRecordProcessor;
 import io.zeebe.engine.processing.streamprocessor.TypedRecordProcessors;
+import io.zeebe.engine.processing.streamprocessor.writers.StateWriter;
 import io.zeebe.engine.processing.timer.DueDateTimerChecker;
 import io.zeebe.engine.state.ZeebeState;
 import io.zeebe.engine.state.mutable.MutableWorkflowState;
@@ -47,7 +48,8 @@ public final class EngineProcessors {
     final var actor = processingContext.getActor();
     final ZeebeState zeebeState = processingContext.getZeebeState();
     final TypedRecordProcessors typedRecordProcessors =
-        TypedRecordProcessors.processors(zeebeState.getKeyGenerator());
+        TypedRecordProcessors.processors(
+            zeebeState.getKeyGenerator(), processingContext.getStateWriter());
     final LogStream stream = processingContext.getLogStream();
     final int partitionId = stream.getPartitionId();
     final int maxFragmentSize = processingContext.getMaxFragmentSize();
@@ -83,7 +85,11 @@ public final class EngineProcessors {
 
     final JobErrorThrownProcessor jobErrorThrownProcessor =
         addJobProcessors(
-            zeebeState, typedRecordProcessors, onJobsAvailableCallback, maxFragmentSize);
+            zeebeState,
+            typedRecordProcessors,
+            onJobsAvailableCallback,
+            maxFragmentSize,
+            /* TODO maybe remove it afterwards**/ processingContext.getStateWriter());
 
     addIncidentProcessors(
         zeebeState, bpmnStreamProcessor, typedRecordProcessors, jobErrorThrownProcessor);
@@ -157,9 +163,10 @@ public final class EngineProcessors {
       final ZeebeState zeebeState,
       final TypedRecordProcessors typedRecordProcessors,
       final Consumer<String> onJobsAvailableCallback,
-      final int maxFragmentSize) {
+      final int maxFragmentSize,
+      final StateWriter stateWriter) {
     return JobEventProcessors.addJobProcessors(
-        typedRecordProcessors, zeebeState, onJobsAvailableCallback, maxFragmentSize);
+        typedRecordProcessors, zeebeState, onJobsAvailableCallback, maxFragmentSize, stateWriter);
   }
 
   private static void addMessageProcessors(

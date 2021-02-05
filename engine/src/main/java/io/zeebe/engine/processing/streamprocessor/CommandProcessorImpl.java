@@ -8,6 +8,7 @@
 package io.zeebe.engine.processing.streamprocessor;
 
 import io.zeebe.engine.processing.streamprocessor.CommandProcessor.CommandControl;
+import io.zeebe.engine.processing.streamprocessor.writers.StateWriter;
 import io.zeebe.engine.processing.streamprocessor.writers.TypedResponseWriter;
 import io.zeebe.engine.processing.streamprocessor.writers.TypedStreamWriter;
 import io.zeebe.engine.state.KeyGenerator;
@@ -21,6 +22,7 @@ public final class CommandProcessorImpl<T extends UnifiedRecordValue>
   private final CommandProcessor<T> wrappedProcessor;
 
   private final KeyGenerator keyGenerator;
+  private final StateWriter stateWriter;
 
   private boolean isAccepted;
   private long entityKey;
@@ -32,9 +34,12 @@ public final class CommandProcessorImpl<T extends UnifiedRecordValue>
   private String rejectionReason;
 
   public CommandProcessorImpl(
-      final KeyGenerator keyGenerator, final CommandProcessor<T> commandProcessor) {
+      final KeyGenerator keyGenerator,
+      final StateWriter stateWriter,
+      final CommandProcessor<T> commandProcessor) {
     this.keyGenerator = keyGenerator;
     wrappedProcessor = commandProcessor;
+    this.stateWriter = stateWriter;
   }
 
   @Override
@@ -49,7 +54,7 @@ public final class CommandProcessorImpl<T extends UnifiedRecordValue>
     final boolean respond = shouldRespond && command.hasRequestMetadata();
 
     if (isAccepted) {
-      streamWriter.appendFollowUpEvent(entityKey, newState, updatedValue);
+      stateWriter.appendFollowUpEvent(entityKey, newState, updatedValue);
       if (respond) {
         responseWriter.writeEventOnCommand(entityKey, newState, updatedValue, command);
       }

@@ -9,6 +9,7 @@ package io.zeebe.engine.processing.streamprocessor;
 
 import io.zeebe.db.TransactionContext;
 import io.zeebe.engine.processing.streamprocessor.writers.CommandResponseWriter;
+import io.zeebe.engine.processing.streamprocessor.writers.StateWriter;
 import io.zeebe.engine.processing.streamprocessor.writers.TypedStreamWriter;
 import io.zeebe.engine.state.EventApplier;
 import io.zeebe.engine.state.ZeebeState;
@@ -57,4 +58,6 @@ public interface ReadonlyProcessingContext {
 
   /** @return the consumer of events to apply their state changes */
   EventApplier getEventApplier();
+
+  StateWriter getStateWriter();
 }

@@ -10,6 +10,7 @@ package io.zeebe.engine.processing.streamprocessor;
 import io.zeebe.db.TransactionContext;
 import io.zeebe.engine.processing.streamprocessor.writers.CommandResponseWriter;
 import io.zeebe.engine.processing.streamprocessor.writers.NoopTypedStreamWriter;
+import io.zeebe.engine.processing.streamprocessor.writers.StateWriter;
 import io.zeebe.engine.processing.streamprocessor.writers.TypedStreamWriter;
 import io.zeebe.engine.state.EventApplier;
 import io.zeebe.engine.state.ZeebeState;
@@ -176,5 +177,10 @@ public final class ProcessingContext implements ReadonlyProcessingContext {
   @Override
   public EventApplier getEventApplier() {
     return eventApplier;
+  }
+
+  public StateWriter getStateWriter() {
+    // TODO clean that up
+    return new StateWriter(getLogStreamWriter(), getEventApplier());
   }
 }

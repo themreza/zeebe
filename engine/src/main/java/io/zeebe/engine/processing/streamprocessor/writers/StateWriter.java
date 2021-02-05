@@ -7,6 +7,7 @@
  */
 package io.zeebe.engine.processing.streamprocessor.writers;
 
+import io.zeebe.engine.state.EventApplier;
 import io.zeebe.engine.state.appliers.EventAppliers;
 import io.zeebe.protocol.impl.record.RecordMetadata;
 import io.zeebe.protocol.record.RecordValue;
@@ -27,11 +28,11 @@ public final class StateWriter implements TypedEventWriter {
   private static final UnaryOperator<RecordMetadata> NO_MODIFIER = UnaryOperator.identity();
 
   private final TypedStreamWriter streamWriter;
-  private final EventAppliers eventAppliers;
+  private final EventApplier eventApplier;
 
-  public StateWriter(final TypedStreamWriter streamWriter, final EventAppliers eventAppliers) {
+  public StateWriter(final TypedStreamWriter streamWriter, final EventApplier eventApplier) {
     this.streamWriter = streamWriter;
-    this.eventAppliers = eventAppliers;
+    this.eventApplier = eventApplier;
   }
 
   @Override
@@ -51,6 +52,6 @@ public final class StateWriter implements TypedEventWriter {
       final RecordValue value,
       final UnaryOperator<RecordMetadata> modifier) {
     streamWriter.appendFollowUpEvent(key, intent, value, modifier);
-    eventAppliers.applyState(key, intent, value);
+    eventApplier.applyState(key, intent, value);
   }
 }

@@ -41,7 +41,13 @@ public final class EventAppliers implements EventApplier {
     register(
         WorkflowInstanceIntent.ELEMENT_ACTIVATED,
         new WorkflowInstanceElementActivatedApplier(state));
+
+    registerJobIntentEventAppliers(state);
+  }
+
+  private void registerJobIntentEventAppliers(final ZeebeState state) {
     register(JobIntent.CREATED, new JobCreatedApplier(state));
+    register(JobIntent.COMPLETED, new JobCompletedEventApplier(state));
   }
 
   private <I extends Intent> void register(final I intent, final TypedEventApplier<I, ?> applier) {

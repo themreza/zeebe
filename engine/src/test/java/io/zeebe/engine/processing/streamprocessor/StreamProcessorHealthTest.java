@@ -188,7 +188,7 @@ public class StreamProcessorHealthTest {
                   new WrappedStreamWriter(processingContext.getLogStreamWriter());
               processingContext.zeebeState(zeebeState);
               processingContext.logStreamWriter(mockedLogStreamWriter);
-              return processors(zeebeState.getKeyGenerator())
+              return processors(zeebeState.getKeyGenerator(), processingContext.getStateWriter())
                   .onEvent(
                       ValueType.WORKFLOW_INSTANCE,
                       ELEMENT_ACTIVATING,
