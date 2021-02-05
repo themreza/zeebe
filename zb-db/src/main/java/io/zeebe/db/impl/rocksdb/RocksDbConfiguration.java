@@ -13,6 +13,8 @@ public final class RocksDbConfiguration {
 
   public static final long DEFAULT_MEMORY_LIMIT = 512 * 1024 * 1024L;
   public static final int DEFAULT_UNLIMITED_MAX_OPEN_FILES = -1;
+  public static final int DEFAULT_MAX_WRITE_BUFFER_NUMBER = 6;
+  public static final int DEFAULT_MIN_WRITE_BUFFER_NUMBER_TO_MERGE = 3;
 
   private final Properties columnFamilyOptions;
   private final boolean statisticsEnabled;
@@ -27,15 +29,23 @@ public final class RocksDbConfiguration {
    */
   private final int maxOpenFiles;
 
+  private final int maxWriteBufferNumber;
+
+  private final int minWriteBufferNumberToMerge;
+
   private RocksDbConfiguration(
       final Properties columnFamilyOptions,
       final boolean statisticsEnabled,
       final long memoryLimit,
-      final int maxOpenFiles) {
+      final int maxOpenFiles,
+      final int maxWriteBufferNumber,
+      final int minWriteBufferNumberToMerge) {
     this.columnFamilyOptions = columnFamilyOptions;
     this.statisticsEnabled = statisticsEnabled;
     this.memoryLimit = memoryLimit;
     this.maxOpenFiles = maxOpenFiles;
+    this.maxWriteBufferNumber = maxWriteBufferNumber;
+    this.minWriteBufferNumberToMerge = Math.min(minWriteBufferNumberToMerge, maxWriteBufferNumber);
   }
 
   public static RocksDbConfiguration empty() {
@@ -61,7 +71,39 @@ public final class RocksDbConfiguration {
       final boolean statisticsEnabled,
       final long memoryLimit,
       final int maxOpenFiles) {
-    return new RocksDbConfiguration(properties, statisticsEnabled, memoryLimit, maxOpenFiles);
+    return of(
+        properties, statisticsEnabled, memoryLimit, maxOpenFiles, DEFAULT_MAX_WRITE_BUFFER_NUMBER);
+  }
+
+  public static RocksDbConfiguration of(
+      final Properties properties,
+      final boolean statisticsEnabled,
+      final long memoryLimit,
+      final int maxOpenFiles,
+      final int maxWriteBufferNumber) {
+    return of(
+        properties,
+        statisticsEnabled,
+        memoryLimit,
+        maxOpenFiles,
+        maxWriteBufferNumber,
+        DEFAULT_MIN_WRITE_BUFFER_NUMBER_TO_MERGE);
+  }
+
+  public static RocksDbConfiguration of(
+      final Properties properties,
+      final boolean statisticsEnabled,
+      final long memoryLimit,
+      final int maxOpenFiles,
+      final int maxWriteBufferNumber,
+      final int minWriteBuffersToMaintain) {
+    return new RocksDbConfiguration(
+        properties,
+        statisticsEnabled,
+        memoryLimit,
+        maxOpenFiles,
+        maxWriteBufferNumber,
+        minWriteBuffersToMaintain);
   }
 
   public Properties getColumnFamilyOptions() {
@@ -78,5 +120,13 @@ public final class RocksDbConfiguration {
 
   public int getMaxOpenFiles() {
     return maxOpenFiles;
+  }
+
+  public int getMaxWriteBufferNumber() {
+    return maxWriteBufferNumber;
+  }
+
+  public int getMinWriteBufferNumberToMerge() {
+    return minWriteBufferNumberToMerge;
   }
 }

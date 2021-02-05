@@ -20,6 +20,9 @@ public final class RocksdbCfg implements ConfigurationEntry {
   private boolean statisticsEnabled;
   private DataSize memoryLimit = DataSize.ofBytes(RocksDbConfiguration.DEFAULT_MEMORY_LIMIT);
   private int maxOpenFiles = RocksDbConfiguration.DEFAULT_UNLIMITED_MAX_OPEN_FILES;
+  private int maxWriteBufferNumber = RocksDbConfiguration.DEFAULT_MAX_WRITE_BUFFER_NUMBER;
+  private int minWriteBufferNumberToMerge =
+      RocksDbConfiguration.DEFAULT_MIN_WRITE_BUFFER_NUMBER_TO_MERGE;
 
   @Override
   public void init(final BrokerCfg globalConfig, final String brokerBase) {
@@ -73,9 +76,30 @@ public final class RocksdbCfg implements ConfigurationEntry {
     this.maxOpenFiles = maxOpenFiles;
   }
 
+  public int getMaxWriteBufferNumber() {
+    return maxWriteBufferNumber;
+  }
+
+  public void setMaxWriteBufferNumber(final int maxWriteBufferNumber) {
+    this.maxWriteBufferNumber = maxWriteBufferNumber;
+  }
+
+  public int getMinWriteBufferNumberToMerge() {
+    return minWriteBufferNumberToMerge;
+  }
+
+  public void setMinWriteBufferNumberToMerge(final int minWriteBufferNumberToMerge) {
+    this.minWriteBufferNumberToMerge = minWriteBufferNumberToMerge;
+  }
+
   public RocksDbConfiguration createRocksDbConfiguration() {
     return RocksDbConfiguration.of(
-        columnFamilyOptions, statisticsEnabled, memoryLimit.toBytes(), maxOpenFiles);
+        columnFamilyOptions,
+        statisticsEnabled,
+        memoryLimit.toBytes(),
+        maxOpenFiles,
+        maxWriteBufferNumber,
+        minWriteBufferNumberToMerge);
   }
 
   @Override
@@ -89,6 +113,10 @@ public final class RocksdbCfg implements ConfigurationEntry {
         + memoryLimit
         + ", maxOpenFiles="
         + maxOpenFiles
+        + ", maxWriteBufferNumber="
+        + maxWriteBufferNumber
+        + ", minWriteBufferNumberToMerge="
+        + minWriteBufferNumberToMerge
         + '}';
   }
 
