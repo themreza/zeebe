@@ -33,7 +33,10 @@ public final class EventAppliers implements EventApplier {
   private static final Function<Intent, TypedEventApplier<?, ?>> UNIMPLEMENTED_EVENT_APPLIER =
       intent ->
           (key, value) ->
-              LOG.debug("No state changed: tried to use unimplemented event applier {}", intent);
+              LOG.debug(
+                  "No state changed: tried to use unimplemented event applier {}.{}",
+                  intent.getClass().getSimpleName(),
+                  intent);
 
   private final Map<Intent, TypedEventApplier> mapping = new HashMap<>();
 
