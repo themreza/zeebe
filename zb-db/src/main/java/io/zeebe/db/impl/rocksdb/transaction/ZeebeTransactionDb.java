@@ -67,6 +67,7 @@ public class ZeebeTransactionDb<ColumnFamilyNames extends Enum<ColumnFamilyNames
     defaultReadOptions = new ReadOptions();
     closables.add(defaultReadOptions);
     defaultWriteOptions = new WriteOptions().setDisableWAL(rocksDbConfiguration.isWalDisabled());
+    LOG.info("RocksDB WAL is disabled: " + defaultWriteOptions.disableWAL());
     closables.add(defaultWriteOptions);
   }
 
