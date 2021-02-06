@@ -16,7 +16,10 @@ public final class RocksDbConfiguration {
   public static final int DEFAULT_MAX_WRITE_BUFFER_NUMBER = 6;
   public static final int DEFAULT_MIN_WRITE_BUFFER_NUMBER_TO_MERGE = 3;
   public static final boolean DEFAULT_STATISTICS_ENABLED = false;
-  public static final int DEFAULT_IO_RATE_BYTES_PER_SECOND = 5 * 1024 * 1024;
+  public static final boolean DEFAULT_WAL_DISABLED = false;
+
+  // setting a rate limit of 0 disables rate limiting entirely
+  public static final int DEFAULT_IO_RATE_BYTES_PER_SECOND = 0;
 
   private Properties columnFamilyOptions = new Properties();
   private boolean statisticsEnabled = DEFAULT_STATISTICS_ENABLED;
@@ -24,6 +27,7 @@ public final class RocksDbConfiguration {
   private int maxWriteBufferNumber = DEFAULT_MAX_WRITE_BUFFER_NUMBER;
   private int minWriteBufferNumberToMerge = DEFAULT_MIN_WRITE_BUFFER_NUMBER_TO_MERGE;
   private int ioRateBytesPerSecond = DEFAULT_IO_RATE_BYTES_PER_SECOND;
+  private boolean walDisabled = DEFAULT_WAL_DISABLED;
 
   /**
    * Defines how many files are kept open by RocksDB, per default it is unlimited (-1). This is done
@@ -97,6 +101,15 @@ public final class RocksDbConfiguration {
 
   public RocksDbConfiguration setIoRateBytesPerSecond(final int ioRateBytesPerSecond) {
     this.ioRateBytesPerSecond = ioRateBytesPerSecond;
+    return this;
+  }
+
+  public boolean isWalDisabled() {
+    return walDisabled;
+  }
+
+  public RocksDbConfiguration setWalDisabled(final boolean walDisabled) {
+    this.walDisabled = walDisabled;
     return this;
   }
 }

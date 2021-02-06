@@ -71,7 +71,9 @@ public final class ZeebeRocksDbFactory<ColumnFamilyType extends Enum<ColumnFamil
       final var options = new Options(dbOptions, columnFamilyOptions);
       closeables.add(options);
 
-      db = ZeebeTransactionDb.openTransactionalDb(options, pathName.getAbsolutePath(), closeables);
+      db =
+          ZeebeTransactionDb.openTransactionalDb(
+              options, pathName.getAbsolutePath(), closeables, rocksDbConfiguration);
 
     } catch (final RocksDBException e) {
       CloseHelper.quietCloseAll(closeables);

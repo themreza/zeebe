@@ -24,6 +24,7 @@ public final class RocksdbCfg implements ConfigurationEntry {
   private int minWriteBufferNumberToMerge =
       RocksDbConfiguration.DEFAULT_MIN_WRITE_BUFFER_NUMBER_TO_MERGE;
   private int ioRateBytesPerSecond = RocksDbConfiguration.DEFAULT_IO_RATE_BYTES_PER_SECOND;
+  private boolean walDisabled = RocksDbConfiguration.DEFAULT_WAL_DISABLED;
 
   @Override
   public void init(final BrokerCfg globalConfig, final String brokerBase) {
@@ -93,6 +94,22 @@ public final class RocksdbCfg implements ConfigurationEntry {
     this.minWriteBufferNumberToMerge = minWriteBufferNumberToMerge;
   }
 
+  public int getIoRateBytesPerSecond() {
+    return ioRateBytesPerSecond;
+  }
+
+  public void setIoRateBytesPerSecond(final int ioRateBytesPerSecond) {
+    this.ioRateBytesPerSecond = ioRateBytesPerSecond;
+  }
+
+  public boolean isWalDisabled() {
+    return walDisabled;
+  }
+
+  public void setWalDisabled(final boolean walDisabled) {
+    this.walDisabled = walDisabled;
+  }
+
   public RocksDbConfiguration createRocksDbConfiguration() {
     return new RocksDbConfiguration()
         .setColumnFamilyOptions(columnFamilyOptions)
@@ -101,7 +118,8 @@ public final class RocksdbCfg implements ConfigurationEntry {
         .setMemoryLimit(memoryLimit.toBytes())
         .setMinWriteBufferNumberToMerge(minWriteBufferNumberToMerge)
         .setStatisticsEnabled(statisticsEnabled)
-        .setIoRateBytesPerSecond(ioRateBytesPerSecond);
+        .setIoRateBytesPerSecond(ioRateBytesPerSecond)
+        .setWalDisabled(walDisabled);
   }
 
   @Override
@@ -121,6 +139,8 @@ public final class RocksdbCfg implements ConfigurationEntry {
         + minWriteBufferNumberToMerge
         + ", ioRateBytesPerSecond="
         + ioRateBytesPerSecond
+        + ", walDisabled="
+        + walDisabled
         + '}';
   }
 
