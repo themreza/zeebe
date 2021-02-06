@@ -27,6 +27,7 @@ import org.rocksdb.DataBlockIndexType;
 import org.rocksdb.IndexType;
 import org.rocksdb.LRUCache;
 import org.rocksdb.Options;
+import org.rocksdb.RateLimiter;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
 import org.rocksdb.Statistics;
@@ -48,7 +49,7 @@ public final class ZeebeRocksDbFactory<ColumnFamilyType extends Enum<ColumnFamil
 
   public static <ColumnFamilyType extends Enum<ColumnFamilyType>>
       ZeebeDbFactory<ColumnFamilyType> newFactory() {
-    return new ZeebeRocksDbFactory<>(RocksDbConfiguration.empty());
+    return new ZeebeRocksDbFactory<>(new RocksDbConfiguration());
   }
 
   public static <ColumnFamilyType extends Enum<ColumnFamilyType>>
@@ -93,8 +94,6 @@ public final class ZeebeRocksDbFactory<ColumnFamilyType extends Enum<ColumnFamil
             // may not be necessary when WAL is disabled, but nevertheless recommended to avoid
             // many small SST files
             .setAvoidFlushDuringRecovery(true)
-            // fsync is called asynchronously once we have at least 4Mb
-            .setBytesPerSync(4 * 1024 * 1024L)
             // limit the size of the manifest (logs all operations), otherwise it will grow
             // unbounded
             .setMaxManifestFileSize(256 * 1024 * 1024L)
@@ -102,6 +101,13 @@ public final class ZeebeRocksDbFactory<ColumnFamilyType extends Enum<ColumnFamil
             // a good balance between useful for performance and small for replication
             .setLogFileTimeToRoll(Duration.ofMinutes(30).toSeconds())
             .setKeepLogFileNum(2);
+
+    // limit I/O writes
+    if (rocksDbConfiguration.getIoRateBytesPerSecond() > 0) {
+      final RateLimiter rateLimiter =
+          new RateLimiter(rocksDbConfiguration.getIoRateBytesPerSecond());
+      dbOptions.setRateLimiter(rateLimiter);
+    }
 
     if (rocksDbConfiguration.isStatisticsEnabled()) {
       final var statistics = new Statistics();
