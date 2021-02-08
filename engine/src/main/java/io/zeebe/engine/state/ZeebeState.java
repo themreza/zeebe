@@ -43,7 +43,7 @@ import io.zeebe.protocol.Protocol;
 public class ZeebeState {
 
   private final ZeebeDb<ZbColumnFamilies> zeebeDb;
-  private final KeyGenerator keyGenerator;
+  private final DbKeyGenerator keyGenerator;
 
   private final MutableWorkflowState workflowState;
   private final MutableTimerInstanceState timerInstanceState;
@@ -129,6 +129,16 @@ public class ZeebeState {
 
   public KeyGenerator getKeyGenerator() {
     return keyGenerator;
+  }
+
+  // TODO (saig0): restrict access
+  public void restoreKeyGenerator(final long key) {
+    keyGenerator.setKey(key);
+  }
+
+  // TODO (saig0): restrict access
+  public long peekKeyGenerator() {
+    return keyGenerator.getCurrentKey();
   }
 
   public MutableBlackListState getBlackListState() {

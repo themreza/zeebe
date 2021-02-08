@@ -40,4 +40,12 @@ public final class DbKeyGenerator implements KeyGenerator {
   public long nextKey() {
     return nextValueManager.getNextValue(LATEST_KEY);
   }
+
+  public void setKey(final long key) {
+    nextValueManager.setValue(LATEST_KEY, key);
+  }
+
+  public long getCurrentKey() {
+    return nextValueManager.getCurrentValue(LATEST_KEY);
+  }
 }

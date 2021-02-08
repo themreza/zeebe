@@ -14,7 +14,9 @@ import io.zeebe.engine.processing.streamprocessor.writers.NoopResponseWriter;
 import io.zeebe.engine.processing.streamprocessor.writers.ReprocessingStreamWriter;
 import io.zeebe.engine.processing.streamprocessor.writers.TypedResponseWriter;
 import io.zeebe.engine.state.EventApplier;
+import io.zeebe.engine.state.KeyGeneratorControls;
 import io.zeebe.engine.state.ZeebeState;
+import io.zeebe.engine.state.mutable.MutableLastProcessedPositionState;
 import io.zeebe.logstreams.impl.Loggers;
 import io.zeebe.logstreams.log.LogStreamReader;
 import io.zeebe.logstreams.log.LoggedEvent;
@@ -28,7 +30,10 @@ import io.zeebe.util.retry.RetryStrategy;
 import io.zeebe.util.sched.ActorControl;
 import io.zeebe.util.sched.future.ActorFuture;
 import io.zeebe.util.sched.future.CompletableActorFuture;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
@@ -95,8 +100,10 @@ public final class ReProcessingStateMachine {
           recordMetadata.getRecordType() == RecordType.EVENT
               || !MigratedStreamProcessors.isMigrated(recordMetadata.getValueType());
 
-  protected final RecordMetadata metadata = new RecordMetadata();
+  private final RecordMetadata metadata = new RecordMetadata();
   private final ZeebeState zeebeState;
+  private final KeyGeneratorControls keyGeneratorControls;
+  private final MutableLastProcessedPositionState lastProcessedPositionState;
   private final ActorControl actor;
   private final ErrorRecord errorRecord = new ErrorRecord();
   private final TypedEventImpl typedEvent;
@@ -122,6 +129,9 @@ public final class ReProcessingStateMachine {
   private long lastSourceEventPosition;
   private long lastFollowUpEventPosition;
   private long snapshotPosition;
+  private long highestRecordKey = -1L;
+
+  private final Map<Long, Long> followUpKeyBySourceCommandPosition = new HashMap<>();
 
   private ActorFuture<Long> recoveryFuture;
   private LoggedEvent currentEvent;
@@ -138,8 +148,10 @@ public final class ReProcessingStateMachine {
     zeebeState = context.getZeebeState();
     abortCondition = context.getAbortCondition();
     eventApplier = context.getEventApplier();
-    typedEvent = new TypedEventImpl(context.getLogStream().getPartitionId());
+    keyGeneratorControls = context.getKeyGeneratorControls();
+    lastProcessedPositionState = context.getLastProcessedPositionState();
 
+    typedEvent = new TypedEventImpl(context.getLogStream().getPartitionId());
     updateStateRetryStrategy = new EndlessRetryStrategy(actor);
     processRetryStrategy = new EndlessRetryStrategy(actor);
     detectReprocessingInconsistency = context.isDetectReprocessingInconsistency();
@@ -216,6 +228,22 @@ public final class ReProcessingStateMachine {
             lastFollowUpEventPosition = currentPosition;
           }
         }
+
+        // remember the highest key on the stream to restore the key generator after replay
+        highestRecordKey = Math.max(newEvent.getKey(), highestRecordKey);
+
+        // store the highest key of a processed command for supporting legacy processors
+        final UnifiedRecordValue recordValue =
+            recordValues.readRecordValue(newEvent, metadata.getValueType());
+        typedEvent.wrap(newEvent, metadata, recordValue);
+
+        if (MigratedStreamProcessors.isMigrated(typedEvent)
+            && typedEvent.getRecordType() == RecordType.COMMAND) {
+          followUpKeyBySourceCommandPosition.put(currentPosition, -1L);
+        }
+
+        followUpKeyBySourceCommandPosition.computeIfPresent(
+            sourceEventPosition, (position, recordKey) -> Math.max(newEvent.getKey(), recordKey));
       }
 
       // reset position
@@ -327,7 +355,7 @@ public final class ReProcessingStateMachine {
             if (isNotOnBlacklist) {
               reprocessRecord(currentEvent);
             }
-            zeebeState.getLastProcessedPositionState().markAsProcessed(position);
+            lastProcessedPositionState.markAsProcessed(position);
           };
     }
     return operationOnProcessing;
@@ -344,6 +372,12 @@ public final class ReProcessingStateMachine {
 
         eventApplier.applyState(
             currentEvent.getKey(), currentEvent.getIntent(), currentEvent.getValue());
+
+      } else if (currentEvent.getRecordType() == RecordType.COMMAND) {
+        // restore the key generator because it is used by not yet migrated processors
+        Optional.ofNullable(followUpKeyBySourceCommandPosition.get(currentEvent.getPosition()))
+            .filter(key -> key > keyGeneratorControls.getCurrentKey())
+            .ifPresent(keyGeneratorControls::setKey);
       }
 
     } else if (recordPosition <= lastSourceEventPosition) {
@@ -397,8 +431,13 @@ public final class ReProcessingStateMachine {
   }
 
   private void onRecovered(final long lastProcessedPosition) {
-    recoveryFuture.complete(lastProcessedPosition);
+    if (highestRecordKey > keyGeneratorControls.getCurrentKey()) {
+      keyGeneratorControls.setKey(highestRecordKey);
+    }
     failedEventPositions.clear();
+    followUpKeyBySourceCommandPosition.clear();
+
+    recoveryFuture.complete(lastProcessedPosition);
   }
 
   private void verifyRecordMatchesToReprocessing(final TypedRecord<?> currentEvent) {
