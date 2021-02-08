@@ -9,9 +9,6 @@ package io.zeebe.engine.processing.workflowinstance;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.entry;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 
 import io.zeebe.el.ExpressionLanguageFactory;
 import io.zeebe.engine.processing.CommandProcessorTestCase;
@@ -85,7 +82,7 @@ public final class CreateWorkflowInstanceProcessorTest
 
     processor =
         new CreateWorkflowInstanceProcessor(
-            workflowState, elementInstanceState, variablesState, keyGenerator);
+            workflowState, elementInstanceState, variablesState, keyGenerator, stateWriter);
   }
 
   @Test
@@ -95,7 +92,7 @@ public final class CreateWorkflowInstanceProcessorTest
         newCommand(WorkflowInstanceCreationRecord.class);
 
     // when
-    processor.onCommand(command, controller, streamWriter);
+    processor.onCommand(command, controller);
 
     // then
     refuteAccepted();
@@ -110,7 +107,7 @@ public final class CreateWorkflowInstanceProcessorTest
     command.getValue().setWorkflowKey(keyGenerator.nextKey());
 
     // when
-    processor.onCommand(command, controller, streamWriter);
+    processor.onCommand(command, controller);
 
     // then
     refuteAccepted();
@@ -125,7 +122,7 @@ public final class CreateWorkflowInstanceProcessorTest
     command.getValue().setBpmnProcessId("workflow");
 
     // when
-    processor.onCommand(command, controller, streamWriter);
+    processor.onCommand(command, controller);
 
     // then
     refuteAccepted();
@@ -140,7 +137,7 @@ public final class CreateWorkflowInstanceProcessorTest
     command.getValue().setBpmnProcessId("workflow").setVersion(1);
 
     // when
-    processor.onCommand(command, controller, streamWriter);
+    processor.onCommand(command, controller);
 
     // then
     refuteAccepted();
@@ -162,7 +159,7 @@ public final class CreateWorkflowInstanceProcessorTest
     command.getValue().setBpmnProcessId(workflow.getBpmnProcessId());
 
     // when
-    processor.onCommand(command, controller, streamWriter);
+    processor.onCommand(command, controller);
 
     // then
     refuteAccepted();
@@ -180,7 +177,7 @@ public final class CreateWorkflowInstanceProcessorTest
     badDocument.putByte(0, (byte) 0); // overwrites map header
 
     // when
-    processor.onCommand(command, controller, streamWriter);
+    processor.onCommand(command, controller);
 
     // then
     refuteAccepted();
@@ -198,7 +195,7 @@ public final class CreateWorkflowInstanceProcessorTest
     command.getValue().setBpmnProcessId(workflow.getBpmnProcessId()).setVariables(variables);
 
     // when
-    processor.onCommand(command, controller, streamWriter);
+    processor.onCommand(command, controller);
 
     // then
     final WorkflowInstanceCreationRecord acceptedRecord =
@@ -225,7 +222,7 @@ public final class CreateWorkflowInstanceProcessorTest
         .setVariables(MsgPackUtil.asMsgPack(document));
 
     // when
-    processor.onCommand(command, controller, streamWriter);
+    processor.onCommand(command, controller);
 
     // then
     final WorkflowInstanceCreationRecord acceptedRecord =
@@ -246,7 +243,7 @@ public final class CreateWorkflowInstanceProcessorTest
     command.getValue().setBpmnProcessId(workflow.getBpmnProcessId());
 
     // when
-    processor.onCommand(command, controller, streamWriter);
+    processor.onCommand(command, controller);
 
     // then
     final WorkflowInstanceCreationRecord acceptedRecord =
@@ -263,7 +260,7 @@ public final class CreateWorkflowInstanceProcessorTest
     command.getValue().setBpmnProcessId(workflow.getBpmnProcessId());
 
     // when
-    processor.onCommand(command, controller, streamWriter);
+    processor.onCommand(command, controller);
 
     // then
     final WorkflowInstanceCreationRecord acceptedRecord =
@@ -280,7 +277,7 @@ public final class CreateWorkflowInstanceProcessorTest
     command.getValue().setWorkflowKey(workflow.getKey());
 
     // when
-    processor.onCommand(command, controller, streamWriter);
+    processor.onCommand(command, controller);
 
     // then
     final WorkflowInstanceCreationRecord acceptedRecord =
@@ -298,15 +295,6 @@ public final class CreateWorkflowInstanceProcessorTest
         .setVersion(workflow.getVersion())
         .setWorkflowInstanceKey(instanceKey)
         .setBpmnProcessId(workflow.getBpmnProcessId());
-  }
-
-  private void verifyElementActivatingPublished(
-      final long instanceKey, final ElementInstance instance) {
-    verify(streamWriter, times(1))
-        .appendFollowUpEvent(
-            eq(instanceKey),
-            eq(WorkflowInstanceIntent.ELEMENT_ACTIVATING),
-            eq(instance.getValue()));
   }
 
   private DeployedWorkflow deployNewWorkflow() {

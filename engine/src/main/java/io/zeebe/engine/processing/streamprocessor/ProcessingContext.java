@@ -9,7 +9,11 @@ package io.zeebe.engine.processing.streamprocessor;
 
 import io.zeebe.db.TransactionContext;
 import io.zeebe.engine.processing.streamprocessor.writers.CommandResponseWriter;
+import io.zeebe.engine.processing.streamprocessor.writers.EventApplyingStateWriter;
 import io.zeebe.engine.processing.streamprocessor.writers.NoopTypedStreamWriter;
+import io.zeebe.engine.processing.streamprocessor.writers.StateWriter;
+import io.zeebe.engine.processing.streamprocessor.writers.TypedCommandWriter;
+import io.zeebe.engine.processing.streamprocessor.writers.TypedRejectionWriter;
 import io.zeebe.engine.processing.streamprocessor.writers.TypedStreamWriter;
 import io.zeebe.engine.state.EventApplier;
 import io.zeebe.engine.state.ZeebeState;
@@ -32,6 +36,7 @@ public final class ProcessingContext implements ReadonlyProcessingContext {
   private ZeebeState zeebeState;
   private TransactionContext transactionContext;
   private EventApplier eventApplier;
+  private StateWriter stateWriter;
 
   private BooleanSupplier abortCondition;
   private Consumer<TypedRecord> onProcessedListener = record -> {};
@@ -99,12 +104,6 @@ public final class ProcessingContext implements ReadonlyProcessingContext {
     return this;
   }
 
-  public ProcessingContext setDetectReprocessingInconsistency(
-      final boolean detectReprocessingInconsistency) {
-    this.detectReprocessingInconsistency = detectReprocessingInconsistency;
-    return this;
-  }
-
   public ProcessingContext eventApplier(final EventApplier eventApplier) {
     this.eventApplier = eventApplier;
     return this;
@@ -165,6 +164,30 @@ public final class ProcessingContext implements ReadonlyProcessingContext {
     return abortCondition;
   }
 
+  @Override
+  public EventApplier getEventApplier() {
+    return eventApplier;
+  }
+
+  @Override
+  public StateWriter getStateWriter() {
+    if (stateWriter == null) {
+      // lazy init, because depends on both logstreamWriter and eventApplier
+      stateWriter = new EventApplyingStateWriter(logStreamWriter, eventApplier);
+    }
+    return stateWriter;
+  }
+
+  @Override
+  public TypedCommandWriter getCommandWriter() {
+    return logStreamWriter;
+  }
+
+  @Override
+  public TypedRejectionWriter getRejectionWriter() {
+    return logStreamWriter;
+  }
+
   public Consumer<TypedRecord> getOnProcessedListener() {
     return onProcessedListener;
   }
@@ -173,8 +196,9 @@ public final class ProcessingContext implements ReadonlyProcessingContext {
     return detectReprocessingInconsistency;
   }
 
-  @Override
-  public EventApplier getEventApplier() {
-    return eventApplier;
+  public ProcessingContext setDetectReprocessingInconsistency(
+      final boolean detectReprocessingInconsistency) {
+    this.detectReprocessingInconsistency = detectReprocessingInconsistency;
+    return this;
   }
 }

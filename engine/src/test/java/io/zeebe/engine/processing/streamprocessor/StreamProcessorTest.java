@@ -437,7 +437,11 @@ public final class StreamProcessorTest {
         processingContext -> {
           processingContextActor = processingContext.getActor();
           final ZeebeState state = processingContext.getZeebeState();
-          return processors(state.getKeyGenerator())
+          return processors(
+                  state.getKeyGenerator(),
+                  processingContext.getStateWriter(),
+                  processingContext.getCommandWriter(),
+                  processingContext.getRejectionWriter())
               .onEvent(
                   ValueType.WORKFLOW_INSTANCE,
                   WorkflowInstanceIntent.ELEMENT_ACTIVATING,
@@ -496,7 +500,11 @@ public final class StreamProcessorTest {
         processingContext -> {
           processingContextActor = processingContext.getActor();
           final ZeebeState state = processingContext.getZeebeState();
-          return processors(state.getKeyGenerator())
+          return processors(
+                  state.getKeyGenerator(),
+                  processingContext.getStateWriter(),
+                  processingContext.getCommandWriter(),
+                  processingContext.getRejectionWriter())
               .onEvent(
                   ValueType.WORKFLOW_INSTANCE,
                   WorkflowInstanceIntent.ELEMENT_ACTIVATING,
